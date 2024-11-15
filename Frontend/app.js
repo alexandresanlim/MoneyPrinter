@@ -1,4 +1,7 @@
 const videoSubject = document.querySelector("#videoSubject");
+const videoTitles = document.querySelector("#videoTitles");
+const videoNews = document.querySelector("#videoNews");
+const videoImages = document.querySelector("#videoImages");
 const aiModel = document.querySelector("#aiModel");
 const voice = document.querySelector("#voice");
 const zipUrl = document.querySelector("#zipUrl");
@@ -8,6 +11,7 @@ const useMusicToggle = document.querySelector("#useMusicToggle");
 const customPrompt = document.querySelector("#customPrompt");
 const generateButton = document.querySelector("#generateButton");
 const cancelButton = document.querySelector("#cancelButton");
+const fillFromApiButton = document.querySelector("#fillFromApiButton");
 
 const advancedOptionsToggle = document.querySelector("#advancedOptionsToggle");
 
@@ -60,7 +64,10 @@ const generateVideo = () => {
   cancelButton.classList.remove("hidden");
 
   // Get values from input fields
-  const videoSubjectValue = videoSubject.value;
+  const videoSubjectValue = document.querySelector("#videoSubject").value //videoSubject.value;
+  const videoTitlesValue = videoTitles.value;
+  const videoImagesValue = videoImages.value;
+  const videoNewsValue = videoNews.value;
   const aiModelValue = aiModel.value;
   const voiceValue = voice.value;
   const paragraphNumberValue = paragraphNumber.value;
@@ -72,12 +79,14 @@ const generateVideo = () => {
   const subtitlesPosition = document.querySelector("#subtitlesPosition").value;
   const colorHexCode = document.querySelector("#subtitlesColor").value;
 
-
   const url = "http://localhost:8080/api/generate";
 
   // Construct data to be sent to the server
   const data = {
     videoSubject: videoSubjectValue,
+    videoTitles: videoTitlesValue,
+    videoImages: videoImagesValue,
+    videoNews: videoNewsValue,
     aiModel: aiModelValue,
     voice: voiceValue,
     paragraphNumber: paragraphNumberValue,
@@ -114,8 +123,53 @@ const generateVideo = () => {
     });
 };
 
+const getNewsFromApi = () => {
+  console.log("Searching news...");
+  // Disable button and change text
+  getNewsFromApi.disabled = true;
+
+  // Get values from input fields
+  const videoSubjectValue = videoSubject.value;
+  const voiceValue = voice.value;
+
+  const url = "http://localhost:8080/api/getnews";
+
+  // Construct data to be sent to the server
+  const data = {
+    videoSubject: videoSubjectValue,
+    voice: voiceValue,
+  };
+
+  // Send the actual request to the server
+  fetch(url, {
+    method: "POST",
+    body: JSON.stringify(data),
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log(data);
+      alert(data.message);
+      videoTitles.value = data.titles
+      videoNews.value = data.sentences
+      videoImages.value = data.images
+
+      
+      // Hide cancel button after generation is complete
+      fillFromApiButton.disabled = false;
+    })
+    .catch((error) => {
+      alert("An error occurred. Please try again later.");
+      console.log(error);
+    });
+};
+
 generateButton.addEventListener("click", generateVideo);
 cancelButton.addEventListener("click", cancelGeneration);
+fillFromApiButton.addEventListener("click", getNewsFromApi);
 
 videoSubject.addEventListener("keyup", (event) => {
   if (event.key === "Enter") {
@@ -135,7 +189,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
 
 // Save the data to localStorage when the user changes the value
 toggles = ["youtubeUploadToggle", "useMusicToggle", "reuseChoicesToggle"];
-fields = ["aiModel", "voice", "paragraphNumber", "videoSubject", "zipUrl", "customPrompt", "threads", "subtitlesPosition", "subtitlesColor"];
+fields = ["aiModel", "voice", "paragraphNumber", "videoSubject", "videoTitles", "videoNews", "zipUrl", "customPrompt", "threads", "subtitlesPosition", "subtitlesColor", "videoImages"];
 
 document.addEventListener("DOMContentLoaded", () => {
   toggles.forEach((id) => {
@@ -144,11 +198,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const storedReuseValue = localStorage.getItem("reuseChoicesToggleValue");
 
     if (toggle && storedValue !== null && storedReuseValue === "true") {
-        toggle.checked = storedValue === "true";
+      toggle.checked = storedValue === "true";
     }
     // Attach change listener to update localStorage
     toggle.addEventListener("change", (event) => {
-        localStorage.setItem(`${id}Value`, event.target.checked);
+      localStorage.setItem(`${id}Value`, event.target.checked);
     });
   });
 

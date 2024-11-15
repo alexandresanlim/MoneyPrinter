@@ -2,16 +2,28 @@ import os
 import uuid
 
 import requests
+import requests._internal_utils
 import srt_equalizer
 import assemblyai as aai
+import math
+from utils import *
 
 from typing import List
 from moviepy.editor import *
+from moviepy.video.fx.fadein import fadein
 from termcolor import colored
 from dotenv import load_dotenv
 from datetime import timedelta
+from datetime import datetime as dateTimePy
 from moviepy.video.fx.all import crop
+
+
 from moviepy.video.tools.subtitles import SubtitlesClip
+from extensions.string_extension import *
+from extensions.urlchecks import *
+import numpy as np
+from utils import *
+from template import *
 
 load_dotenv("../.env")
 
@@ -35,6 +47,30 @@ def save_video(video_url: str, directory: str = "../temp") -> str:
         f.write(requests.get(video_url).content)
 
     return video_path
+
+def save_image(image_url: str, directory: str = "../temp") -> str:
+    """
+    Saves a video from a given URL and returns the path to the video.
+
+    Args:
+        video_url (str): The URL of the video to save.
+        directory (str): The path of the temporary directory to save the video to
+
+    Returns:
+        str: The path to the saved video.
+    """
+    
+    if(not is_url(image_url)):
+       video_path = choose_random_video(image_url)
+       return video_path
+    
+    image_id = uuid.uuid4()
+    image_path = f"{directory}/{image_id}.png"
+    
+    with open(image_path, "wb") as f:
+        f.write(requests.get(image_url).content)
+
+    return image_path
 
 
 def __generate_subtitles_assemblyai(audio_path: str, voice: str) -> str:
@@ -68,6 +104,64 @@ def __generate_subtitles_assemblyai(audio_path: str, voice: str) -> str:
 
     return subtitles
 
+def generate_description_locally(sentences: List[str], audio_clips: List[AudioFileClip]) -> list:
+
+    start_time = 0
+    descriptions = []
+
+    for i, (sentence, audio_clip) in enumerate(zip(sentences, audio_clips), start=1):
+                
+        duration = audio_clip.duration
+        end_time = start_time + duration
+
+        descriptions.append(((start_time, end_time), f"{sentence}"))
+
+        start_time += duration  # Update start time for the next subtitle
+        
+    print(colored(f"[+] descriptions generated.{descriptions}", "green"))
+
+    return descriptions
+
+def generate_pre_titles_locally(sentences: List[str], audio_clips: List[AudioFileClip]) -> list:
+
+    start_time = 0
+    titles = []
+
+    for i, (sentence, audio_clip) in enumerate(zip(sentences, audio_clips), start=1):        
+        duration = audio_clip.duration
+        end_time = start_time + duration
+        
+        if(i < len(sentences)):
+            titles.append(((start_time, end_time), f"Next: {i+1}. {sentences[i]}"))
+            
+        else:
+            titles.append(((start_time, end_time), f"Thank you! Subscribe."))
+            
+            
+
+        start_time += duration  # Update start time for the next subtitle
+        
+    print(colored(f"[+] Pre Titles generated.{titles}", "green"))
+
+    return titles
+
+def generate_titles_locally(sentences: List[str], audio_clips: List[AudioFileClip]) -> list:
+
+    start_time = 0
+    titles = []
+
+    for i, (sentence, audio_clip) in enumerate(zip(sentences, audio_clips), start=1):
+                
+        duration = audio_clip.duration
+        end_time = start_time + duration
+
+        titles.append(((start_time, end_time), sentence))
+
+        start_time += duration  # Update start time for the next subtitle
+        
+    print(colored(f"[+] Titles generated.{titles}", "green"))
+
+    return titles
 
 def __generate_subtitles_locally(sentences: List[str], audio_clips: List[AudioFileClip]) -> str:
     """
@@ -88,7 +182,7 @@ def __generate_subtitles_locally(sentences: List[str], audio_clips: List[AudioFi
 
     start_time = 0
     subtitles = []
-
+    
     for i, (sentence, audio_clip) in enumerate(zip(sentences, audio_clips), start=1):
         duration = audio_clip.duration
         end_time = start_time + duration
@@ -101,6 +195,47 @@ def __generate_subtitles_locally(sentences: List[str], audio_clips: List[AudioFi
 
     return "\n".join(subtitles)
 
+def generate_titles(audio_path: str, titles: List[str], audio_clips: List[AudioFileClip], voice: str) -> str:
+    """
+    Generates titles from a given audio file and returns the path to the titles.
+
+    Args:
+        audio_path (str): The path to the audio file to generate subtitles from.
+        sentences (List[str]): all the sentences said out loud in the audio clips
+        audio_clips (List[AudioFileClip]): all the individual audio clips which will make up the final audio track
+
+    Returns:
+        str: The path to the generated subtitles.
+    """
+
+    # def equalize_subtitles(srt_path: str, max_chars: int = 10) -> None:
+    #     # Equalize subtitles
+    #     srt_equalizer.equalize_srt_file(srt_path, srt_path, max_chars)
+
+    # Save subtitles
+    titles_path = f"../titles/{uuid.uuid4()}.srt"
+
+    if ASSEMBLY_AI_API_KEY is not None and ASSEMBLY_AI_API_KEY != "":
+        print(colored("[+] Creating titles using AssemblyAI", "blue"))
+        titles = __generate_subtitles_assemblyai(audio_path, voice)
+    else:
+        print(colored("[+] Creating titles locally", "blue"))
+        titles = generate_titles_locally(titles, audio_clips)
+        # print(colored("[-] Local subtitle generation has been disabled for the time being.", "red"))
+        # print(colored("[-] Exiting.", "red"))
+        # sys.exit(1)
+        
+    print(colored("[*] titles: " + titles, "blue"))
+
+    with open(titles_path, "w") as file:
+        file.write(titles)
+
+    # Equalize subtitles
+    # equalize_subtitles(titles_path)
+
+    print(colored("[+] Titles generated.", "green"))
+
+    return titles_path
 
 def generate_subtitles(audio_path: str, sentences: List[str], audio_clips: List[AudioFileClip], voice: str) -> str:
     """
@@ -115,7 +250,7 @@ def generate_subtitles(audio_path: str, sentences: List[str], audio_clips: List[
         str: The path to the generated subtitles.
     """
 
-    def equalize_subtitles(srt_path: str, max_chars: int = 10) -> None:
+    def equalize_subtitles(srt_path: str, max_chars: int = 20) -> None:
         # Equalize subtitles
         srt_equalizer.equalize_srt_file(srt_path, srt_path, max_chars)
 
@@ -132,7 +267,7 @@ def generate_subtitles(audio_path: str, sentences: List[str], audio_clips: List[
         # print(colored("[-] Exiting.", "red"))
         # sys.exit(1)
 
-    with open(subtitles_path, "w") as file:
+    with open(subtitles_path, "w", encoding='utf-8') as file:
         file.write(subtitles)
 
     # Equalize subtitles
@@ -141,6 +276,17 @@ def generate_subtitles(audio_path: str, sentences: List[str], audio_clips: List[
     print(colored("[+] Subtitles generated.", "green"))
 
     return subtitles_path
+
+# def draw_line_center(frame):
+#     """Draw a rectangle in the frame"""
+#     # change (top, bottom, left, right) to your coordinates
+#     frame[top, left: right] = color
+#     frame[bottom, left: right] = color
+#     frame[top: bottom, left] = color
+#     frame[top: bottom, right] = color
+#     return frame
+
+
 
 
 def combine_videos(video_paths: List[str], max_duration: int, max_clip_duration: int, threads: int) -> str:
@@ -198,14 +344,42 @@ def combine_videos(video_paths: List[str], max_duration: int, max_clip_duration:
             clips.append(clip)
             tot_dur += clip.duration
 
+
+    #add clip on final
+    # clipFinal = VideoFileClip("../templates/final.mp4")
+    # clipFinal = clipFinal.without_audio()
+    # clipFinal = clipFinal.set_fps(30)
+    # clips.append(clipFinal)
+
     final_clip = concatenate_videoclips(clips)
     final_clip = final_clip.set_fps(30)
     final_clip.write_videofile(combined_video_path, threads=threads)
+    
+    print(colored("[+] Video was combined", "blue"))
 
     return combined_video_path
 
 
-def generate_video(combined_video_path: str, tts_path: str, subtitles_path: str, threads: int, subtitles_position: str,  text_color : str) -> str:
+def generate_titles_locally(sentences: List[str], audio_clips: List[AudioFileClip]) -> list:
+
+    start_time = 0
+    titles = []
+
+    for i, (sentence, audio_clip) in enumerate(zip(sentences, audio_clips), start=1):
+                
+        duration = audio_clip.duration
+        end_time = start_time + duration
+
+        titles.append(((start_time, end_time), sentence))
+
+        start_time += duration  # Update start time for the next subtitle
+        
+    print(colored(f"[+] Titles generated.{titles}", "green"))
+
+    return titles
+
+
+def  generate_video(video_type:str, image_paths: list, titles: List[str], sentences: List[str], audio_clips: list, tts_path: str, max_duration: int, description_path: list, titles_path: list, subtitles_path: str, threads: int,  text_color : str, subject: str) -> str:
     """
     This function creates the final video, with subtitles and audio.
 
@@ -219,30 +393,58 @@ def generate_video(combined_video_path: str, tts_path: str, subtitles_path: str,
     Returns:
         str: The path to the final video.
     """
-    # Make a generator that returns a TextClip when called with consecutive
-    generator = lambda txt: TextClip(
-        txt,
-        font="../fonts/bold_font.ttf",
-        fontsize=100,
-        color=text_color,
-        stroke_color="black",
-        stroke_width=5,
-    )
+    
+    try:
+        switch = {
+            "politica": "#011efe",
+            "futebol": "#0bff01",
+            "fofoca": "#f000ff",
+            "dorama": "#fe0000",
+            "bitcoin": "#ffac00",
+            "curiosidades": "#200589",
+            "financas": "#200589",
+            "tecnologia": "#ab20fd",
+        }
+        
+        text_color = switch.get(subject, text_color)
+            
+        final_clip = get_final_clip(video_type, image_paths,titles,sentences, audio_clips, tts_path, max_duration,description_path,titles_path,subtitles_path,text_color, subject)
+        #subscribe_clip = get_subscribe_clip(video_type)
+  
+        fileName = dateTimePy.now().strftime("%m_%d_%Y_%H%M%S")
+        
+        last_title = remove_special_character(titles[0]).replace(" ", "_")
+        fileName += f'_{last_title}'
+        
+        #clips = []
+        
+        #clips.append(final_clip)
+        #clips.append(subscribe_clip)
+        
+        #result = concatenate_videoclips(clips)
+        
+        final_clip.write_videofile(f"../temp/{fileName}.mp4", threads=threads or 2)
 
-    # Split the subtitles position into horizontal and vertical
-    horizontal_subtitles_position, vertical_subtitles_position = subtitles_position.split(",")
+        print(colored(f"[+] Final video file name: {fileName}", "green"))
 
-    # Burn the subtitles into the video
-    subtitles = SubtitlesClip(subtitles_path, generator)
-    result = CompositeVideoClip([
-        VideoFileClip(combined_video_path),
-        subtitles.set_pos((horizontal_subtitles_position, vertical_subtitles_position))
-    ])
+        return f"{fileName}.mp4"
+    
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(colored(f"[-] Error generating {video_type} video: {e} {exc_type} {fname} {exc_tb.tb_lineno}", "red"))
 
-    # Add the audio
-    audio = AudioFileClip(tts_path)
-    result = result.set_audio(audio)
+def radius_mask(size, radius):
+    mask = 255 * np.ones((size, size, 3), dtype=np.uint8)
+    Y, X = np.ogrid[:size, :size]
+    mask_area = (X <= radius) | (X >= size - radius) | (Y <= radius) | (Y >= size - radius) | ((X - size + radius)**2 + (Y - radius)**2 <= radius**2) | ((X - radius)**2 + (Y - size + radius)**2 <= radius**2)
+    mask[~mask_area] = 0
+    return mask
 
-    result.write_videofile("../temp/output.mp4", threads=threads or 2)
-
-    return "output.mp4"
+def circle_mask(size):
+    mask = 255 * np.ones((size, size, 3), dtype=np.uint8)
+    center = size // 2
+    Y, X = np.ogrid[:size, :size]
+    mask_area = (X - center) ** 2 + (Y - center) ** 2 <= center ** 2
+    mask[~mask_area] = 0
+    return mask

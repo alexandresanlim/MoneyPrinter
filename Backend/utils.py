@@ -24,8 +24,10 @@ def clean_dir(path: str) -> None:
         None
     """
     try:
+        logger.info(f"path {path}")
+        
         if not os.path.exists(path):
-            os.mkdir(path)
+            os.makedirs(path, exist_ok=True)
             logger.info(f"Created directory: {path}")
 
         for file in os.listdir(path):
@@ -91,6 +93,38 @@ def choose_random_song() -> str:
         return f"../Songs/{song}"
     except Exception as e:
         logger.error(colored(f"Error occurred while choosing random song: {str(e)}", "red"))
+        
+def choose_random_image(subject) -> str:
+    """
+    Chooses a random song from the songs/ directory.
+
+    Returns:
+        str: The path to the chosen song.
+    """
+    try:
+        path = f"../templates/images/{subject}"
+        images = os.listdir(path)
+        image = random.choice(images)
+        logger.info(colored(f"Chose image: {image}", "green"))
+        return f"{path}/{image}"
+    except Exception as e:
+        logger.error(colored(f"Error occurred while choosing random song: {str(e)}", "red"))
+        
+def choose_random_video(subject) -> str:
+    """
+    Chooses a random song from the songs/ directory.
+
+    Returns:
+        str: The path to the chosen song.
+    """
+    try:
+        path = f"../templates/videos/{subject}"
+        images = os.listdir(path)
+        image = random.choice(images)
+        logger.info(colored(f"Chose image: {image}", "green"))
+        return f"{path}/{image}"
+    except Exception as e:
+        logger.error(colored(f"Error occurred while choosing random song: {str(e)}", "red"))
 
 
 def check_env_vars() -> None:
@@ -115,4 +149,10 @@ def check_env_vars() -> None:
     except Exception as e:
         logger.error(f"Error occurred while checking environment variables: {str(e)}")
         sys.exit(1)  # Aborts the program if an unexpected error occurs
+        
+def is_short_video_type(video_type: str) -> bool:
+    return video_type == 'short'
+
+def is_long_video_type(video_type: str) -> bool:
+    return video_type == 'long'
 

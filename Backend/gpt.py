@@ -65,6 +65,40 @@ def generate_response(prompt: str, ai_model: str) -> str:
 
     return response
 
+def generate_script_to_news(paragraph_number: int, news: str) -> str:
+    response = news
+
+    print(colored(response, "cyan"))
+
+    # Return the generated script
+    if response:
+        # Clean the script
+        # Remove asterisks, hashes
+        response = response.replace("*", "")
+        response = response.replace("#", "")
+
+        # Remove markdown syntax
+        response = re.sub(r"\[.*\]", "", response)
+        response = re.sub(r"\(.*\)", "", response)
+
+        # Split the script into paragraphs
+        paragraphs = response.split("\n\n")
+
+        # Select the specified number of paragraphs
+        selected_paragraphs = paragraphs[:paragraph_number]
+
+        # Join the selected paragraphs into a single string
+        final_script = "\n\n".join(selected_paragraphs)
+
+        # Print to console the number of paragraphs used
+        print(colored(f"Number of paragraphs used: {len(selected_paragraphs)}", "green"))
+
+        return final_script
+    else:
+        print(colored("[-] GPT returned an empty response.", "red"))
+        return None
+    
+
 def generate_script(video_subject: str, paragraph_number: int, ai_model: str, voice: str, customPrompt: str) -> str:
 
     """
@@ -153,6 +187,62 @@ def generate_script(video_subject: str, paragraph_number: int, ai_model: str, vo
     else:
         print(colored("[-] GPT returned an empty response.", "red"))
         return None
+
+
+def get_news(video_subject: str, amount: int, script: str, ai_model: str) -> List[str]:
+    # Build prompt
+    prompt = f"""
+    Generate top {amount} news today for stock videos,
+    depending on the subject of a video.
+    Subject: {video_subject}
+
+    The news are to be returned as
+    a JSON-Array of strings.
+
+    Each news should consist of 1-3 words,
+    always add the main subject of the video.
+    
+    YOU MUST ONLY RETURN THE JSON-ARRAY OF STRINGS.
+    YOU MUST NOT RETURN ANYTHING ELSE. 
+    YOU MUST NOT RETURN THE SCRIPT.
+    
+    The news must be related to the subject of the video.
+    Here is an example of a JSON-Array of strings:
+    ["news 1", "news 2", "news 3"]
+
+   
+    """
+
+    # Generate search terms
+    response = generate_response(prompt, ai_model)
+
+    # Parse response into a list of search terms
+    search_terms = []
+    
+    try:
+        search_terms = json.loads(response)
+        if not isinstance(search_terms, list) or not all(isinstance(term, str) for term in search_terms):
+            raise ValueError("Response is not a list of strings.")
+
+    except (json.JSONDecodeError, ValueError):
+        print(colored("[*] GPT returned an unformatted response. Attempting to clean...", "yellow"))
+
+        # Attempt to extract list-like string and convert to list
+        match = re.search(r'\["(?:[^"\\]|\\.)*"(?:,\s*"[^"\\]*")*\]', response)
+        if match:
+            try:
+                search_terms = json.loads(match.group())
+            except json.JSONDecodeError:
+                print(colored("[-] Could not parse response.", "red"))
+                return []
+
+
+
+    # Let user know
+    print(colored(f"\nGenerated {len(search_terms)} search terms: {', '.join(search_terms)}", "cyan"))
+
+    # Return search terms
+    return search_terms
 
 
 def get_search_terms(video_subject: str, amount: int, script: str, ai_model: str) -> List[str]:
