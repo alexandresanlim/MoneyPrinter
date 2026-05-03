@@ -1,6 +1,6 @@
 import requests
 
-API_KEY = "AIzaSyDuvcF1iMzKa5KVC6kYYlheVdGB6R-ozGI"
+API_KEY = ""
 CHANNEL_ID = "UCRZDgA08rxRckuY6fKoNwuQ"  # Substitua pelo ID do canal
 
 # Estatísticas do canal
