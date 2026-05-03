@@ -11,7 +11,7 @@ check_env_vars()
 from gpt import *
 from video import *
 from search import *
-from news import *
+from apis.news import *
 from uuid import uuid4
 from tiktokvoice import *
 from flask_cors import CORS

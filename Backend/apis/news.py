@@ -3,6 +3,23 @@ import requests
 from typing import List
 from termcolor import colored
 
+def get_top_headlines() -> List[str]:
+    url = "https://gnews.io/api/v4/top-headlines?category=nation&lang=pt&country=br&max=10&apikey=4c8ab8f9854932e807398dc84743a056"
+    
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        print(colored(f"Erro na requisição: {response.status_code}", "red"))
+        return []
+    
+    data = response.json()
+    
+    titles = [article["title"] for article in data["articles"]]
+    
+    print(colored(titles, "cyan"))
+    
+    return titles
+
 def search_news(query: str, api_key: str, limit: int = 5, language:str = 'en') -> List[str]:
     """
     Searches for stock videos based on a query.

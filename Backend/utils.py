@@ -112,10 +112,10 @@ def choose_random_image(subject) -> str:
         
 def choose_random_video(subject) -> str:
     """
-    Chooses a random song from the songs/ directory.
+    Chooses a random video from the videos/ directory.
 
     Returns:
-        str: The path to the chosen song.
+        str: The path to the chosen video.
     """
     try:
         path = f"../templates/videos/{subject}"

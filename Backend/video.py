@@ -7,6 +7,8 @@ import srt_equalizer
 import assemblyai as aai
 import math
 from utils import *
+from apis.statistic import *
+from apis.news import *
 
 from typing import List
 from moviepy.editor import *
@@ -257,12 +259,12 @@ def generate_subtitles(audio_path: str, sentences: List[str], audio_clips: List[
     # Save subtitles
     subtitles_path = f"../subtitles/{uuid.uuid4()}.srt"
 
-    if ASSEMBLY_AI_API_KEY is not None and ASSEMBLY_AI_API_KEY != "":
-        print(colored("[+] Creating subtitles using AssemblyAI", "blue"))
-        subtitles = __generate_subtitles_assemblyai(audio_path, voice)
-    else:
-        print(colored("[+] Creating subtitles locally", "blue"))
-        subtitles = __generate_subtitles_locally(sentences, audio_clips)
+    # if ASSEMBLY_AI_API_KEY is not None and ASSEMBLY_AI_API_KEY != "":
+    #     print(colored("[+] Creating subtitles using AssemblyAI", "blue"))
+    #     subtitles = __generate_subtitles_assemblyai(audio_path, voice)
+    # else:
+    print(colored("[+] Creating subtitles locally", "blue"))
+    subtitles = __generate_subtitles_locally(sentences, audio_clips)
         # print(colored("[-] Local subtitle generation has been disabled for the time being.", "red"))
         # print(colored("[-] Exiting.", "red"))
         # sys.exit(1)
@@ -379,6 +381,9 @@ def generate_titles_locally(sentences: List[str], audio_clips: List[AudioFileCli
     return titles
 
 
+    
+
+
 def  generate_video(video_type:str, image_paths: list, titles: List[str], sentences: List[str], audio_clips: list, tts_path: str, max_duration: int, description_path: list, titles_path: list, subtitles_path: str, threads: int,  text_color : str, subject: str) -> str:
     """
     This function creates the final video, with subtitles and audio.
@@ -407,8 +412,27 @@ def  generate_video(video_type:str, image_paths: list, titles: List[str], senten
         }
         
         text_color = switch.get(subject, text_color)
+        
+        comments = get_comments()
+        stat_channel = get_channel_stats()
+        head_lines = get_top_headlines()
             
-        final_clip = get_final_clip(video_type, image_paths,titles,sentences, audio_clips, tts_path, max_duration,description_path,titles_path,subtitles_path,text_color, subject)
+        final_clip = get_final_clip(
+            video_type, 
+            image_paths,
+            titles,
+            sentences, 
+            audio_clips, 
+            tts_path, 
+            max_duration,
+            description_path,
+            titles_path,
+            subtitles_path,
+            text_color, 
+            subject, 
+            comments, 
+            stat_channel,
+            head_lines)
         #subscribe_clip = get_subscribe_clip(video_type)
   
         fileName = dateTimePy.now().strftime("%m_%d_%Y_%H%M%S")
@@ -433,18 +457,3 @@ def  generate_video(video_type:str, image_paths: list, titles: List[str], senten
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(colored(f"[-] Error generating {video_type} video: {e} {exc_type} {fname} {exc_tb.tb_lineno}", "red"))
-
-def radius_mask(size, radius):
-    mask = 255 * np.ones((size, size, 3), dtype=np.uint8)
-    Y, X = np.ogrid[:size, :size]
-    mask_area = (X <= radius) | (X >= size - radius) | (Y <= radius) | (Y >= size - radius) | ((X - size + radius)**2 + (Y - radius)**2 <= radius**2) | ((X - radius)**2 + (Y - size + radius)**2 <= radius**2)
-    mask[~mask_area] = 0
-    return mask
-
-def circle_mask(size):
-    mask = 255 * np.ones((size, size, 3), dtype=np.uint8)
-    center = size // 2
-    Y, X = np.ogrid[:size, :size]
-    mask_area = (X - center) ** 2 + (Y - center) ** 2 <= center ** 2
-    mask[~mask_area] = 0
-    return mask

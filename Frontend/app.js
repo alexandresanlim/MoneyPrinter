@@ -14,6 +14,7 @@ const cancelButton = document.querySelector("#cancelButton");
 const fillFromApiButton = document.querySelector("#fillFromApiButton");
 
 const advancedOptionsToggle = document.querySelector("#advancedOptionsToggle");
+const publicInteractionToggle = document.querySelector("#publicInteractionToggle");
 
 advancedOptionsToggle.addEventListener("click", () => {
   // Change Emoji, from ▼ to ▲ and vice versa
@@ -22,6 +23,16 @@ advancedOptionsToggle.addEventListener("click", () => {
     ? "Show less Options ▲"
     : "Show Advanced Options ▼";
   const advancedOptions = document.querySelector("#advancedOptions");
+  advancedOptions.classList.toggle("hidden");
+});
+
+publicInteractionToggle.addEventListener("click", () => {
+  // Change Emoji, from ▼ to ▲ and vice versa
+  const emoji = publicInteractionToggle.textContent;
+  publicInteractionToggle.textContent = emoji.includes("▼")
+    ? "Public Interaction Options ▲"
+    : "Public Interaction Options ▼";
+  const advancedOptions = document.querySelector("#publicInteractionOptions");
   advancedOptions.classList.toggle("hidden");
 });
 
